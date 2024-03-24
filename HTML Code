@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentence by Sentence Reader</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1a1a1a; /* Dark background color */
+      color: #ffffff; /* Text color */
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+      padding: 20px;
+      background-color: #333333; /* Container background color */
+      border-radius: 10px; /* Rounded corners for the container */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Box shadow for a slight depth effect */
+    }
+    #sentenceDisplay {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    input[type="file"] {
+      color: #ffffff; /* Text color for file input */
+    }
+    button {
+      background-color: #007bff; /* Button background color */
+      color: #ffffff; /* Button text color */
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px; /* Rounded corners for the buttons */
+    }
+    button:hover {
+      background-color: #0056b3; /* Darker color on hover */
+    }
+    button:disabled {
+      background-color: #6c757d; /* Disabled button color */
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <input type="file" id="fileInput">
+    <div id="sentenceDisplay"></div>
+    <button id="prevBtn" disabled>Previous</button>
+    <button id="nextBtn" disabled>Next</button>
+  </div>
+
+  <script>
+    let sentences = [];
+    let currentIndex = 0;
+
+    function updateSentence() {
+      document.getElementById('sentenceDisplay').textContent = sentences[currentIndex];
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const typedarray = new Uint8Array(event.target.result);
+        const pdf = window.pdfjsLib.getDocument(typedarray);
+
+        pdf.promise.then(function(pdf) {
+          let text = "";
+          const totalPages = pdf.numPages;
+          for (let i = 1; i <= totalPages; i++) {
+            pdf.getPage(i).then(function(page) {
+              page.getTextContent().then(function(content) {
+                content.items.forEach(function(item) {
+                  text += item.str + " ";
+                });
+                if (i === totalPages) {
+                  sentences = text.split('. ');
+                  currentIndex = 0;
+                  updateSentence();
+                  document.getElementById('prevBtn').disabled = false;
+                  document.getElementById('nextBtn').disabled = false;
+                }
+              });
+            });
+          }
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+    document.getElementById('prevBtn').addEventListener('click', function() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateSentence();
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', function() {
+      if (currentIndex < sentences.length - 1) {
+        currentIndex++;
+        updateSentence();
+      }
+    });
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+</body>
+</html>
